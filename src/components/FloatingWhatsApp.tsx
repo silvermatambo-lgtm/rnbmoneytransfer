@@ -1,0 +1,2 @@
+import {MessageCircle} from 'lucide-react';
+export default function FloatingWhatsApp(){return <a href="https://wa.me/27691084446?text=Hello%20R%26B%20Money%20Transfer,%20I%20need%20help%20with%20a%20transfer." target="_blank" rel="noreferrer" className="fixed right-4 bottom-24 md:bottom-6 z-40 h-14 w-14 rounded-full bg-green-500 text-white shadow-2xl flex items-center justify-center" aria-label="WhatsApp R&B Money Transfer"><MessageCircle size={28}/></a>}
