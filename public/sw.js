@@ -1,10 +1,9 @@
-const CACHE_NAME = 'granite-installs-v1';
+const CACHE_NAME = 'rnb-money-transfer-v3';
 const OFFLINE_URL = '/offline.html';
 
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
-  '/offline.html',
+  OFFLINE_URL,
 ];
 
 self.addEventListener('install', (event) => {
@@ -17,7 +16,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
     )
   );
   self.clients.claim();
@@ -25,13 +24,36 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const request = event.request;
+
+  // For React Router page navigation, always use the network first and
+  // fall back to the app shell. This prevents stale/blank client routes.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => response)
+        .catch(async () => {
+          const appShell = await caches.match('/');
+          return appShell || caches.match(OFFLINE_URL);
+        })
+    );
+    return;
+  }
+
+  // Cache only same-origin static GET assets. Do not cache dynamic navigations.
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+      return fetch(request).then((response) => {
+        if (!response || response.status !== 200 || response.type !== 'basic') return response;
         const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         return response;
-      })
-      .catch(() => caches.match(event.request).then((r) => r || caches.match('/')))
+      });
+    })
   );
 });
